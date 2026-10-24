@@ -2,50 +2,59 @@ package com.IngSoftware.BibliotecaApp;
 
 import com.IngSoftware.BibliotecaApp.excepciones.DatosInvalidosException;
 import com.IngSoftware.BibliotecaApp.excepciones.ReglaNegocioException;
-import com.IngSoftware.BibliotecaApp.modelo.Libro;
-import com.IngSoftware.BibliotecaApp.negocio.LibroService;
+import com.IngSoftware.BibliotecaApp.modelo.Prestamo;
+import com.IngSoftware.BibliotecaApp.negocio.PrestamoService;
 
 public class Main {
 
-    static LibroService service = new LibroService();
+    static PrestamoService service = new PrestamoService();
+    static Prestamo ultimo; // guarda el último préstamo creado por una prueba
 
     public static void main(String[] args) {
-        probar("1. Registrar libro con todos los datos (debe funcionar)", () ->
-                service.registrar("Libro de prueba", "Autor Prueba", "Editorial X", "2020"));
+        probar("1. Socio inactivo S-004 pide el libro 5 (debe fallar, RN-01)", () ->
+                service.registrarPrestamo("S-004", 5));
 
-        probar("2. Registrar sin editorial ni año (debe funcionar)", () ->
-                service.registrar("Libro de prueba", "Autor Prueba", "", ""));
+        probar("2. Socio S-003 con préstamo vencido pide el libro 5 (debe fallar, RN-06)", () ->
+                service.registrarPrestamo("S-003", 5));
 
-        probar("3. Registrar sin título (debe fallar)", () ->
-                service.registrar("  ", "Autor Prueba", "", ""));
+        probar("3. Socio S-002 con 3 préstamos pide el libro 5 (debe fallar, RN-03)", () ->
+                service.registrarPrestamo("S-002", 5));
 
-        probar("4. Registrar con año con letras (debe fallar)", () ->
-                service.registrar("Libro de prueba", "Autor Prueba", "", "20ab"));
+        probar("4. Socio S-001 pide Rayuela, que está prestado (debe fallar, RN-02)", () ->
+                service.registrarPrestamo("S-001", 1));
 
-        probar("5. Buscar con texto vacío (debe fallar)", () ->
-                service.buscar("", true));
+        probar("5. Socio S-001 pide Don Quijote, inactivo (debe fallar, RN-02)", () ->
+                service.registrarPrestamo("S-001", 9));
 
-        probar("6. Baja de Rayuela (id 1), que está prestado (debe fallar)", () ->
-                service.darDeBaja(1));
+        probar("6. Socio S-001 pide un libro que no existe (debe fallar)", () ->
+                service.registrarPrestamo("S-001", 999));
 
-        probar("7. Baja de Don Quijote (id 9), ya inactivo (debe fallar)", () ->
-                service.darDeBaja(9));
+        probar("7. Socio que no existe pide el libro 5 (debe fallar)", () ->
+                service.registrarPrestamo("S-999", 5));
 
-        probar("8. Baja de un libro nuevo, sin préstamos (debe funcionar)", () -> {
-            Libro nuevo = service.registrar("Libro de prueba", "Autor Prueba", "", "");
-            service.darDeBaja(nuevo.getId());
+        probar("8. Socio S-001 pide Cien años, id 5 (debe funcionar)", () -> {
+            ultimo = service.registrarPrestamo("S-001", 5);
+            System.out.println("   Préstamo #" + ultimo.getId()
+                    + " - vence el " + ultimo.getFechaVencimiento() + " (7 días)");
         });
 
-        probar("9. Modificar un libro que no existe (debe fallar)", () ->
-                service.modificar(999, "Titulo", "Autor", "", ""));
+        probar("9. Socio S-005 pide Cien años otra vez, ya prestado (debe fallar)", () ->
+                service.registrarPrestamo("S-005", 5));
 
-        System.out.println("10. Disponibilidad:");
-        System.out.println("   Rayuela (id 1), prestado -> disponible: "
-                + service.estaDisponible(service.obtenerPorId(1)) + " (esperado: false)");
-        System.out.println("   Cien años (id 5), libre  -> disponible: "
-                + service.estaDisponible(service.obtenerPorId(5)) + " (esperado: true)");
-        System.out.println("   Don Quijote (id 9), baja -> disponible: "
-                + service.estaDisponible(service.obtenerPorId(9)) + " (esperado: false)");
+        probar("10. Devolver un préstamo que no existe (debe fallar)", () ->
+                service.registrarDevolucion(999));
+
+        probar("11. Devolver el préstamo recién creado (debe funcionar)", () -> {
+            Prestamo p = service.registrarDevolucion(ultimo.getId());
+            System.out.println("   Devuelto el " + p.getFechaDevolucion());
+        });
+
+        probar("12. Devolver el mismo préstamo otra vez (debe fallar, RN-08)", () ->
+                service.registrarDevolucion(ultimo.getId()));
+
+        System.out.println("13. Listados:");
+        System.out.println("   Vigentes: " + service.listarVigentes().size() + " (esperado: 3)");
+        System.out.println("   Vencidos: " + service.listarVencidos().size() + " (esperado: 1)");
     }
 
     // Ejecuta una prueba e informa el resultado sin que el programa se cierre
