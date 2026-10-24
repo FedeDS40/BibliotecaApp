@@ -1,38 +1,52 @@
 package com.IngSoftware.BibliotecaApp;
 
-import com.IngSoftware.BibliotecaApp.datos.PrestamoDAO;
-import com.IngSoftware.BibliotecaApp.modelo.Prestamo;
-
-import java.time.LocalDate;
+import com.IngSoftware.BibliotecaApp.excepciones.DatosInvalidosException;
+import com.IngSoftware.BibliotecaApp.excepciones.ReglaNegocioException;
+import com.IngSoftware.BibliotecaApp.negocio.SocioService;
 
 public class Main {
+
+    static SocioService service = new SocioService();
+
     public static void main(String[] args) {
-        PrestamoDAO dao = new PrestamoDAO();
-        LocalDate hoy = LocalDate.now();
+        probar("1. Registrar socio nuevo (debe funcionar)", () ->
+                service.registrar("S-006", "35666777", "Pedro", "López"));
 
-        System.out.println("Préstamos sin devolver de Martín Gómez (esperado: 3): "
-                + dao.contarSinDevolver(2));
-        System.out.println("¿Carla Ruiz tiene vencidos? (esperado: true): "
-                + dao.existeVencido(3, hoy));
-        System.out.println("¿Lucía Fernández tiene vencidos? (esperado: false): "
-                + dao.existeVencido(1, hoy));
-        System.out.println("¿Rayuela está prestado? (esperado: true): "
-                + dao.libroTienePrestamoSinDevolver(1));
-        System.out.println("¿Cien años (id 5) está prestado? (esperado: false): "
-                + dao.libroTienePrestamoSinDevolver(5));
+        probar("2. Registrar el mismo número de socio (debe fallar)", () ->
+                service.registrar("S-006", "35999888", "Ana", "Torres"));
 
-        System.out.println("--- Préstamos sin devolver (esperado: 4) ---");
-        for (Prestamo p : dao.listarSinDevolver()) {
-            System.out.println("#" + p.getId() + " " + p.getSocio().getNombreCompleto()
-                    + " - " + p.getLibro().getTitulo()
-                    + " - vence " + p.getFechaVencimiento()
-                    + (p.estaVencido(hoy) ? " (VENCIDO, " + p.diasDeAtraso(hoy) + " días)" : ""));
-        }
+        probar("3. Registrar con un DNI que ya existe (debe fallar)", () ->
+                service.registrar("S-007", "30111222", "Ana", "Torres"));
 
-        System.out.println("--- Historial de Sofía Díaz (esperado: 2) ---");
-        for (Prestamo p : dao.buscarPorSocio(5)) {
-            System.out.println("#" + p.getId() + " " + p.getLibro().getTitulo()
-                    + " - devuelto " + p.getFechaDevolucion());
+        probar("4. Registrar con DNI con letras (debe fallar)", () ->
+                service.registrar("S-007", "abc", "Ana", "Torres"));
+
+        probar("5. Registrar sin nombre (debe fallar)", () ->
+                service.registrar("S-007", "36111222", "  ", "Torres"));
+
+        probar("6. Baja de Martín Gómez, con 3 préstamos (debe fallar)", () ->
+                service.darDeBaja("S-002"));
+
+        probar("7. Baja de Julián Pérez, ya inactivo (debe fallar)", () ->
+                service.darDeBaja("S-004"));
+
+        probar("8. Baja del socio nuevo S-006, sin préstamos (debe funcionar)", () ->
+                service.darDeBaja("S-006"));
+
+        probar("9. Buscar un socio que no existe (debe fallar)", () ->
+                service.obtenerPorNumero("S-999"));
+    }
+
+    // Ejecuta una prueba e informa el resultado sin que el programa se cierre
+    static void probar(String titulo, Runnable accion) {
+        System.out.println(titulo);
+        try {
+            accion.run();
+            System.out.println("   -> OK, la operación se realizó.");
+        } catch (ReglaNegocioException e) {
+            System.out.println("   -> Regla de negocio: " + e.getMessage());
+        } catch (DatosInvalidosException e) {
+            System.out.println("   -> Datos inválidos: " + e.getMessage());
         }
     }
 }
