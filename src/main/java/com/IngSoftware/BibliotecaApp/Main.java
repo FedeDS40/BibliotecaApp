@@ -2,39 +2,50 @@ package com.IngSoftware.BibliotecaApp;
 
 import com.IngSoftware.BibliotecaApp.excepciones.DatosInvalidosException;
 import com.IngSoftware.BibliotecaApp.excepciones.ReglaNegocioException;
-import com.IngSoftware.BibliotecaApp.negocio.SocioService;
+import com.IngSoftware.BibliotecaApp.modelo.Libro;
+import com.IngSoftware.BibliotecaApp.negocio.LibroService;
 
 public class Main {
 
-    static SocioService service = new SocioService();
+    static LibroService service = new LibroService();
 
     public static void main(String[] args) {
-        probar("1. Registrar socio nuevo (debe funcionar)", () ->
-                service.registrar("S-006", "35666777", "Pedro", "López"));
+        probar("1. Registrar libro con todos los datos (debe funcionar)", () ->
+                service.registrar("Libro de prueba", "Autor Prueba", "Editorial X", "2020"));
 
-        probar("2. Registrar el mismo número de socio (debe fallar)", () ->
-                service.registrar("S-006", "35999888", "Ana", "Torres"));
+        probar("2. Registrar sin editorial ni año (debe funcionar)", () ->
+                service.registrar("Libro de prueba", "Autor Prueba", "", ""));
 
-        probar("3. Registrar con un DNI que ya existe (debe fallar)", () ->
-                service.registrar("S-007", "30111222", "Ana", "Torres"));
+        probar("3. Registrar sin título (debe fallar)", () ->
+                service.registrar("  ", "Autor Prueba", "", ""));
 
-        probar("4. Registrar con DNI con letras (debe fallar)", () ->
-                service.registrar("S-007", "abc", "Ana", "Torres"));
+        probar("4. Registrar con año con letras (debe fallar)", () ->
+                service.registrar("Libro de prueba", "Autor Prueba", "", "20ab"));
 
-        probar("5. Registrar sin nombre (debe fallar)", () ->
-                service.registrar("S-007", "36111222", "  ", "Torres"));
+        probar("5. Buscar con texto vacío (debe fallar)", () ->
+                service.buscar("", true));
 
-        probar("6. Baja de Martín Gómez, con 3 préstamos (debe fallar)", () ->
-                service.darDeBaja("S-002"));
+        probar("6. Baja de Rayuela (id 1), que está prestado (debe fallar)", () ->
+                service.darDeBaja(1));
 
-        probar("7. Baja de Julián Pérez, ya inactivo (debe fallar)", () ->
-                service.darDeBaja("S-004"));
+        probar("7. Baja de Don Quijote (id 9), ya inactivo (debe fallar)", () ->
+                service.darDeBaja(9));
 
-        probar("8. Baja del socio nuevo S-006, sin préstamos (debe funcionar)", () ->
-                service.darDeBaja("S-006"));
+        probar("8. Baja de un libro nuevo, sin préstamos (debe funcionar)", () -> {
+            Libro nuevo = service.registrar("Libro de prueba", "Autor Prueba", "", "");
+            service.darDeBaja(nuevo.getId());
+        });
 
-        probar("9. Buscar un socio que no existe (debe fallar)", () ->
-                service.obtenerPorNumero("S-999"));
+        probar("9. Modificar un libro que no existe (debe fallar)", () ->
+                service.modificar(999, "Titulo", "Autor", "", ""));
+
+        System.out.println("10. Disponibilidad:");
+        System.out.println("   Rayuela (id 1), prestado -> disponible: "
+                + service.estaDisponible(service.obtenerPorId(1)) + " (esperado: false)");
+        System.out.println("   Cien años (id 5), libre  -> disponible: "
+                + service.estaDisponible(service.obtenerPorId(5)) + " (esperado: true)");
+        System.out.println("   Don Quijote (id 9), baja -> disponible: "
+                + service.estaDisponible(service.obtenerPorId(9)) + " (esperado: false)");
     }
 
     // Ejecuta una prueba e informa el resultado sin que el programa se cierre
